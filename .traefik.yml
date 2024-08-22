@@ -1,0 +1,27 @@
+# The name of your plugin as displayed in the Plugins Catalog web UI.
+displayName: Matomo Tracking
+
+# For now, `middleware` is the only type available.
+type: middleware
+
+# The import path of your plugin.
+import: matomo_tracking
+
+# A brief description of what your plugin is doing.
+summary: This plugin is used to enhance the usual javascript-based tracking with matomo by a backend-based tracking strategy. This concept is able to bypass browser addons which block the execution of javascript code. 
+
+# Configuration data for your plugin.
+# This is mandatory,
+# and Plugins Catalog will try to execute the plugin with the data you provide as part of its startup validity tests.
+testData:
+  matomoURL: "https://matomo-staging.die-bonn.de"
+  domains:
+    "ppa.die-bonn.de":
+      trackingEnabled: true
+      idSite: 123
+      excludedPaths:
+        - "/admin/*"
+        - "\\.(css|js|ico)$"
+    "kansas-suche.de":
+      trackingEnabled: false
+      idSite: 456
