@@ -14,7 +14,7 @@ summary: This plugin is used to enhance the usual javascript-based tracking with
 # This is mandatory,
 # and Plugins Catalog will try to execute the plugin with the data you provide as part of its startup validity tests.
 testData:
-  matomoURL: "https://matomo-staging.die-bonn.de"
+  matomoURL: "https://matomo-staging.die-bonn.de/matomo.php"
   domains:
     "ppa.die-bonn.de":
       trackingEnabled: true
