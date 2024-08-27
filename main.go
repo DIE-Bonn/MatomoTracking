@@ -71,25 +71,28 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	fmt.Println(m.config)
 
 	// Iterate through the config to check if the requested domain shall be tracked
-	for domainName, domainConfig := range m.config.Domains {
-		fmt.Println(domainName)
-		fmt.Println(domainConfig.TrackingEnabled)
-		fmt.Println(domainConfig.IdSite)
-		fmt.Println(domainConfig.ExcludedPaths)
-		// Check if the requested domain exists in the config and if tracking is enabled for this domain
-		if domainName == requestedDomain && domainConfig.TrackingEnabled {
-			fmt.Println("Requested Domain exists and is enabled.")
-			// Check if the requested path matches the exclusion list, if not track the request
-			if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths) {
-				fmt.Println("Track the requested URL.")
+        for domainName, domainConfig := range m.config.Domains {
+                fmt.Println(domainName)
+                fmt.Println(domainConfig.TrackingEnabled)
+                fmt.Println(domainConfig.IdSite)
+                fmt.Println(domainConfig.ExcludedPaths)
+                // Check if the requested domain exists in the config 
+                if domainName == requestedDomain {
+			// Check if tracking is enabled for this domain
+                        if domainConfig.TrackingEnabled {
+                                fmt.Println("Requested Domain exists and is enabled.")
+                                // Check if the requested path matches the exclusion list, if not track the request
+                                if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths) {
+                                        fmt.Println("Track the requested URL.")
 
-				// Perform the tracking request asynchronously
-                		go m.sendTrackingRequest(req, domainConfig, requestedDomain)
-			}
-			break
-		}
-	}
-
+                                        // Perform the tracking request asynchronously
+                                        go m.sendTrackingRequest(req, domainConfig, requestedDomain)
+                                }
+                        }
+                        break
+                }
+        }
+	
 	m.next.ServeHTTP(rw, req)
 
 }
