@@ -82,52 +82,9 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			// Check if the requested path matches the exclusion list, if not track the request
 			if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths) {
 				fmt.Println("Track the requested URL.")
-				// Send request to matomo
-				// Build the matomo URL
-				matomoReqURL, err := url.Parse(m.config.MatomoURL)
-				if err == nil {
-					// Determine the scheme (http or https)
-					scheme := "http"
-					if req.TLS != nil {
-    						scheme = "https"
-					}
-					// Construct the full URL
-					fullURL := scheme + "://" + requestedDomain + req.URL.RequestURI()
-					query := matomoReqURL.Query()
-					query.Set("url", fullURL)
-					query.Set("rec", "1")
-					query.Set("idsite", strconv.Itoa(domainConfig.IdSite))
-					//query.Set("new_visit", "1")
-					matomoReqURL.RawQuery = query.Encode()
-					fmt.Println(matomoReqURL.RawQuery)
 
-					// Create the matomo request
-					matomoReq, err := http.NewRequest("GET", matomoReqURL.String(), nil)
-					fmt.Println("Matomo request: ", matomoReq)
-					if err == nil {
-						fmt.Println("Send matomo request")
-						matomoReq.Header.Set("User-Agent", req.Header.Get("User-Agent"))
-						//matomoReq.Header.Set("X-Forwarded-For", "172.30.20.10")
-						// Extract the client's IP address
-						clientIP := req.Header.Get("X-Forwarded-For")
-						fmt.Println("X-Forwarded-For: ", clientIP)
-						if clientIP == "" {
-    							// If the X-Forwarded-For header is empty, use the remote address
-    							clientIP, _, _ = net.SplitHostPort(req.RemoteAddr)
-						}
-
-						// Set or update the X-Forwarded-For header
-						if existingXFF := matomoReq.Header.Get("X-Forwarded-For"); existingXFF != "" {
-    							matomoReq.Header.Set("X-Forwarded-For", existingXFF+", "+clientIP)
-						} else {
-    							matomoReq.Header.Set("X-Forwarded-For", clientIP)
-						}
-						fmt.Println("Matomo request: ", matomoReq)
-						resp, err := http.DefaultClient.Do(matomoReq)
-						fmt.Println("Response: ", resp)
-					}
-
-				}
+				// Perform the tracking request asynchronously
+                		go m.sendTrackingRequest(req, domainConfig, requestedDomain)
 			}
 			break
 		}
@@ -137,18 +94,84 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 }
 
+// sendTrackingRequest sends a tracking request to Matomo asynchronously.
+func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig DomainConfig, requestedDomain string) {
+    // Build the Matomo URL
+    matomoReqURL, err := url.Parse(m.config.MatomoURL)
+    if err != nil {
+        fmt.Println("Error parsing Matomo URL:", err)
+        return
+    }
+
+    // Determine the scheme (http or https)
+    scheme := "http"
+    if req.TLS != nil {
+        scheme = "https"
+    }
+
+    // Construct the full URL
+    fullURL := scheme + "://" + requestedDomain + req.URL.RequestURI()
+    query := matomoReqURL.Query()
+    query.Set("url", fullURL)
+    query.Set("rec", "1")
+    query.Set("idsite", strconv.Itoa(domainConfig.IdSite))
+    matomoReqURL.RawQuery = query.Encode()
+    fmt.Println("Matomo query string:", matomoReqURL.RawQuery)
+
+    // Create the Matomo request
+    matomoReq, err := http.NewRequest("GET", matomoReqURL.String(), nil)
+    if err != nil {
+        fmt.Println("Error creating Matomo request:", err)
+        return
+    }
+    matomoReq.Header.Set("User-Agent", req.Header.Get("User-Agent"))
+
+    // Extract the client's IP address
+    clientIP := req.Header.Get("X-Forwarded-For")
+    if clientIP == "" {
+        // If the X-Forwarded-For header is empty, use the remote address
+        clientIP, _, _ = net.SplitHostPort(req.RemoteAddr)
+    }
+
+    // Set or update the X-Forwarded-For header
+    if existingXFF := matomoReq.Header.Get("X-Forwarded-For"); existingXFF != "" {
+        matomoReq.Header.Set("X-Forwarded-For", existingXFF+", "+clientIP)
+    } else {
+        matomoReq.Header.Set("X-Forwarded-For", clientIP)
+    }
+
+    fmt.Println("Matomo tracking request: ", matomoReq)
+
+    // Send the request asynchronously
+    resp, err := http.DefaultClient.Do(matomoReq)
+    if err != nil {
+        fmt.Println("Error sending Matomo request:", err)
+    } else {
+	//close the response body to ensure that resources such as network connections associated with the HTTP response body are released properly
+        defer resp.Body.Close()
+        fmt.Println("Matomo response status:", resp.Status)
+    }
+}
+
 func isPathExcluded(path string, excludedPaths []string) bool {
-	// check if path contains a sub string which matches at least one of the excluded paths
-	fmt.Println(path)
-	for _, excludedPath := range excludedPaths {
-		fmt.Println(excludedPath)
-		if matches, err := regexp.MatchString(excludedPath, path); matches {
-			if err != nil {
-				fmt.Println("Error matching regex: ", err)
-			}
-			fmt.Println("matches")
-			return true
-		}
-	}
-	return false
+    fmt.Println("Checking path:", path)
+
+    for _, excludedPath := range excludedPaths {
+        fmt.Println("Testing against excluded path pattern:", excludedPath)
+
+        matches, err := regexp.MatchString(excludedPath, path)
+        if err != nil {
+            // Log the error and continue with the next pattern
+            fmt.Println("Error matching regex:", err)
+            continue
+        }
+
+        if matches {
+            fmt.Println("Path matches excluded pattern:", excludedPath)
+            return true
+        }
+    }
+
+    fmt.Println("No matching excluded pattern found.")
+    return false
 }
