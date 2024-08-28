@@ -134,3 +134,91 @@ Checks if a given path matches any of the exclusion patterns:
 1. Iterates through all exclusion regex patterns.
 2. Returns `true` if the path matches any pattern, `false` otherwise.
 
+
+## Setup instructions
+
+Step 1: **Create the Plugin**
+
+1. Create a directory for your plugin, for example: `traefik/plugins-local/src/matomo_tracking/`.
+
+2. Place the plugin’s Go source code files in this directory:
+
+    - main.go (contains the plugin logic).
+    - Other necessary Go files (if any).
+
+    Here's an example structure
+
+    ```
+    traefik/
+    ├── plugins-local/
+    │   └── src/
+    │       └── matomo_tracking/ 
+    │           ├── .traefik.yml
+    │           ├── go.mod
+    │           └── main.go
+    ```
+
+Step 2: **Configure Traefik for Local Plugins**
+
+1. Edit your Traefik static configuration file (e.g., traefik.yml or traefik.toml), and enable experimental local plugins:
+
+    Example: `traefik.yml`:
+    ```
+    experimental:
+      localPlugins:
+        matomoTracking:
+          moduleName: matomo_tracking
+    ```
+
+Step 3: **Configure Dynamic Configuration**
+
+1. Create a dynamic configuration file (e.g., dynamic.yml) that defines how the plugin should behave:
+
+    Example `dynamic.yml`:
+    ```
+    http:
+      middlewares:
+        matomo-tracking:
+          plugin:
+            matomoTracking:
+              matomoURL: "https://matomo-staging.die-bonn.de/matomo.php"
+              domains:
+                "www3.die-bonn.de":
+                  trackingEnabled: true
+                  idSite: 21
+                  excludedPaths:
+                    - "/admin/*"
+                    - "\\.(css|js|ico)$"
+                    - "\\.\\w{1,5}(\\?.+)?$"
+                "kansas-suche.de":
+                  trackingEnabled: false
+                  idSite: 456
+    ```
+
+    - This configuration defines the global rules for the `matomo-tracking` middleware, consisting of domain names with their individual tracking configuration.
+
+Step 4: **Associate the middleware plugin to the entrypoint**
+
+1. Edit your Traefik static configuration file `traefik.yml`:
+
+    Example `traefik.yml`:
+
+    ```
+    entryPoints:
+      webinsecure:
+        address: ":80"
+        http:
+          middlewares:
+            - matomo-tracking@file
+    ```
+
+    - This configuration ensures that the `matomo-tracking` plugin can analyze all incoming requests to decide which requests to send to the matomo server for tracking purposes.
+
+Step 5: **Restart Traefik**
+
+1. Start or restart traefik to load the plugin and apply the new configuration
+
+    ```bash
+    docker compose down && docker compose up -d
+    ```
+
