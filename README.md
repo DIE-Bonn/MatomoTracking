@@ -16,11 +16,11 @@ This plugin, `matomoTracking`, is designed for Traefik as middleware to handle t
 
     - `MatomoURL`
         - Type: **string**
-        - Description: Specifies the base URL for the Matomo server endpoint where tracking data should be sent. Typically, this is the URL to the matomo.php file on the Matomo server, such as https://matomo.example.com/matomo.php.
-        - Example: "https://matomo.example.com/matomo.php"
+        - Description: Specifies the base URL for the Matomo server endpoint where tracking data should be sent. Typically, this is the URL to the `matomo.php` file on the Matomo server, such as `https://matomo.example.com/matomo.php`.
+        - Example: `"https://matomo.example.com/matomo.php"`
     - `Domains`:
-        - Type:
-        - Description: A map where each key is a domain name (as a string) and the corresponding value is a DomainConfig struct. This allows you to define tracking rules for multiple domains individually.
+        - Type: `map[string]DomainConfig`
+        - Description: A map where each key is a domain name (as a `string`) and the corresponding value is a `DomainConfig` struct. This allows you to define tracking rules for multiple domains individually.
         - Example:
             ```
             domains:
@@ -106,4 +106,31 @@ matomo-tracking:
         - `idSite: 456`: Uses `456` as the Matomo site ID.
 
 
+## Code Documentation
+
+### ServeHTTP Method
+
+Main logic of the middleware:
+
+1. Extracts the requested domain from the host.
+2. Checks if tracking is enabled for the domain.
+3. If enabled and not excluded, sends a tracking request to Matomo asynchronously.
+4. Forwards the request to the next handler in the chain.
+
+### sendTrackingRequest Method
+
+Sends a tracking request to Matomo asynchronously:
+
+1. Constructs the tracking URL with the appropriate query parameters.
+2. Creates an HTTP GET request to Matomo.
+3. Sets the `User-Agent` and `X-Forwarded-For` headers to identify the client.
+4. Sends the request using a custom HTTP client.
+5. Logs the response status.
+
+### isPathExcluded Function
+
+Checks if a given path matches any of the exclusion patterns:
+
+1. Iterates through all exclusion regex patterns.
+2. Returns `true` if the path matches any pattern, `false` otherwise.
 
