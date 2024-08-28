@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"strconv"
+	"time"
 )
 
 // Config represents the configuration for the MatomoTracking plugin.
@@ -49,6 +50,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // performs Matomo tracking if enabled for the domain, and forwards the request
 // to the next handler in the chain.
 func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	fmt.Println("Plugin: Matomo Tracking")
 	host := req.Host
         var requestedDomain string
 
@@ -66,24 +68,20 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
         	requestedDomain = host
     	}
 
-	fmt.Println("Matomo Tracking")
-	fmt.Println("Requested Domain: ", requestedDomain)
-	fmt.Println(m.config)
+	fmt.Println("Requested Domain:", requestedDomain)
+	fmt.Println("Matomo Tracking config: ", m.config)
 
 	// Iterate through the config to check if the requested domain shall be tracked
         for domainName, domainConfig := range m.config.Domains {
-                fmt.Println(domainName)
-                fmt.Println(domainConfig.TrackingEnabled)
-                fmt.Println(domainConfig.IdSite)
-                fmt.Println(domainConfig.ExcludedPaths)
                 // Check if the requested domain exists in the config 
                 if domainName == requestedDomain {
 			// Check if tracking is enabled for this domain
+			fmt.Printf("Requested domain %s found in config with the settings: %t, %d, %s", requestedDomain, domainConfig.TrackingEnabled, domainConfig.IdSite, domainConfig.ExcludedPaths)
                         if domainConfig.TrackingEnabled {
                                 fmt.Println("Requested Domain exists and is enabled.")
                                 // Check if the requested path matches the exclusion list, if not track the request
                                 if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths) {
-                                        fmt.Println("Track the requested URL.")
+                                        fmt.Println("Tracking the requested URL.")
 
                                         // Perform the tracking request asynchronously
                                         go m.sendTrackingRequest(req, domainConfig, requestedDomain)
@@ -94,7 +92,6 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
         }
 	
 	m.next.ServeHTTP(rw, req)
-
 }
 
 // sendTrackingRequest sends a tracking request to Matomo asynchronously.
@@ -145,15 +142,22 @@ func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig Dom
 
     fmt.Println("Matomo tracking request: ", matomoReq)
 
-    // Send the request asynchronously
-    resp, err := http.DefaultClient.Do(matomoReq)
+    // Create a custom HTTP client with timeouts
+    var customClient = &http.Client{
+        Timeout: 10 * time.Second, // Set a global timeout for requests
+    }
+
+    // Use this client to send requests
+    resp, err := customClient.Do(matomoReq)
     if err != nil {
         fmt.Println("Error sending Matomo request:", err)
-    } else {
-	//close the response body to ensure that resources such as network connections associated with the HTTP response body are released properly
-        defer resp.Body.Close()
-        fmt.Println("Matomo response status:", resp.Status)
+        return
     }
+    //close the response body to ensure that resources such as network connections associated with the HTTP response body are released properly
+    defer resp.Body.Close()
+
+    // Process the response
+    fmt.Println("Matomo response status:", resp.Status)
 }
 
 func isPathExcluded(path string, excludedPaths []string) bool {
