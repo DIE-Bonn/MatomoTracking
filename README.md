@@ -2,7 +2,9 @@
 
 ## Overview
 
-This plugin, `matomoTracking`, is designed for Traefik as middleware to handle tracking of requests using the Matomo analytics platform. The plugin inspects incoming HTTP requests, checks if the tracking is enabled for the requested domain, and sends tracking data to Matomo if required.
+This plugin, `matomoTracking`, is designed for Traefik as middleware to handle the tracking of requests using the Matomo analytics platform. The plugin inspects incoming HTTP requests, checks if tracking is enabled for the requested domain, and sends tracking data to Matomo if required.
+
+The main purpose of this plugin is to enhance the accuracy of visitor tracking by overcoming limitations associated with the traditional JavaScript-based tracking method used by Matomo. Standard tracking relies on JavaScript code running in the user's browser, which can be blocked by certain browser extensions or privacy tools. By capturing tracking data directly on the server side, this plugin ensures that visitor information is accurately recorded even when JavaScript is disabled or blocked, providing a more reliable and comprehensive analytics solution.
 
 ## Structs and Configuration Explanation
 
