@@ -23,6 +23,7 @@ type DomainConfig struct {
 	TrackingEnabled bool     `json:"trackingEnabled,omitempty"`
 	IdSite          int      `json:"idSite,omitempty"`
 	ExcludedPaths   []string `json:"excludedPaths,omitempty"`
+	IncludedPaths	[]string `json:"includedPaths,omitempty"`
 }
 
 // CreateConfig returns the default configuration for the plugin.
@@ -80,7 +81,7 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
                         if domainConfig.TrackingEnabled {
                                 fmt.Println("Requested Domain exists and is enabled.")
                                 // Check if the requested path matches the exclusion list, if not track the request
-                                if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths) {
+                                if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths, domainConfig.IncludedPaths) {
                                         fmt.Println("Tracking the requested URL.")
 
                                         // Perform the tracking request asynchronously
@@ -160,25 +161,52 @@ func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig Dom
     fmt.Println("Matomo response status:", resp.Status)
 }
 
-func isPathExcluded(path string, excludedPaths []string) bool {
-    fmt.Println("Checking path:", path)
+func isPathExcluded(path string, excludedPaths, includedPaths []string) bool {
+      fmt.Println("Checking path:", path)
 
-    for _, excludedPath := range excludedPaths {
-        fmt.Println("Testing against excluded path pattern:", excludedPath)
+      // First, check if the path matches any of the excluded patterns
+      excludedMatch := false
+      for _, excludedPath := range excludedPaths {
+            fmt.Println("Testing against excluded path pattern:", excludedPath)
 
-        matches, err := regexp.MatchString(excludedPath, path)
-        if err != nil {
-            // Log the error and continue with the next pattern
-            fmt.Println("Error matching regex:", err)
-            continue
-        }
+            matches, err := regexp.MatchString(excludedPath, path)
+            if err != nil {
+                  // Log the error and continue with the next pattern
+                  fmt.Println("Error matching regex for excluded path:", err)
+                  continue
+            }
 
-        if matches {
-            fmt.Println("Path matches excluded pattern:", excludedPath)
-            return true
-        }
-    }
+            if matches {
+                  fmt.Println("Path matches excluded pattern:", excludedPath)
+                  excludedMatch = true
+                  break
+            }
+      }
 
-    fmt.Println("No matching excluded pattern found.")
-    return false
+      // If there's no match in excluded paths, the path is not excluded
+      if !excludedMatch {
+            fmt.Println("No match found in excluded paths; path is not excluded.")
+            return false // Do not exclude
+      }
+
+      // Now check if the path matches any of the included patterns
+      for _, includedPath := range includedPaths {
+            fmt.Println("Testing against included path pattern:", includedPath)
+
+            matches, err := regexp.MatchString(includedPath, path)
+            if err != nil {
+                  // Log the error and continue with the next pattern
+                  fmt.Println("Error matching regex for included path:", err)
+                  continue
+            }
+
+            if matches {
+                  fmt.Println("Path matches included pattern:", includedPath)
+                  return false // Path should be included, so not excluded
+            }
+      }
+
+      // If it matched an excluded path but not an included path, exclude it
+      fmt.Println("Path is excluded due to no matching included pattern.")
+      return true
 }

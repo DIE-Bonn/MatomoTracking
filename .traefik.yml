@@ -21,7 +21,9 @@ testData:
       idSite: 123
       excludedPaths:
         - "/admin/*"
-        - "\\.(css|js|ico)$"
+        - "\\.\\w{1,5}(\\?.+)?$"
+      includedPaths:
+        - "\\.(php|aspx)(\\?.*)?$"
     "kansas-suche.de":
       trackingEnabled: false
       idSite: 456
