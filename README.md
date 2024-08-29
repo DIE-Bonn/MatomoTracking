@@ -31,8 +31,9 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
                 idSite: 21
                 excludedPaths:
                   - "/admin/*"
-                  - "\\.(css|js|ico)$"
                   - "\\.\\w{1,5}(\\?.+)?$"
+                includedPaths:
+                  - "\\.(php|aspx)(\\?.*)?$"
               "test.de":
                 trackingEnabled: false
                 idSite: 456
@@ -47,22 +48,29 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
     **Fields**:
 
     - `TrackingEnabled`:
-        - Type: `bool`
-        - Description: Indicates whether tracking is enabled for the given domain. If `true`, the plugin will attempt to send tracking data to Matomo. If `false`, tracking is disabled for that domain.
-        - Example: true
+        - **Type**: `bool`
+        - **Description**: Indicates whether tracking is enabled for the given domain. If `true`, the plugin will attempt to send tracking data to Matomo. If `false`, tracking is disabled for that domain.
+        - **Example**: true
     - `IdSite`:
-        - Type: `int`
-        - Description: The unique identifier for the website or domain in Matomo. Each domain has its own site ID that Matomo uses to differentiate between multiple websites being tracked on the same server.
-        - Example: `21`
+        - **Type**: `int`
+        - **Description**: The unique identifier for the website or domain in Matomo. Each domain has its own site ID that Matomo uses to differentiate between multiple websites being tracked on the same server.
+        - **Example**: `21`
     - `ExcludedPaths`:
-        - Type: `[]string` (Slice of strings)
-        - Description: A list of regular expressions that define URL paths that should be excluded from tracking. If the requested path matches any of the regex patterns in this list, the request will not be tracked by Matomo.
-        - Example:
+        - **Type**: `[]string` (Slice of strings)
+        - **Description**: A list of regular expressions that define URL paths that should be excluded from tracking. If the requested path matches any of the regex patterns in this list, the request will not be tracked by Matomo.
+        - **Example**:
             ```
             excludedPaths:
               - "/admin/*"
-              - "\\.(css|js|ico)$"
               - "\\.\\w{1,5}(\\?.+)?$"
+            ```
+    - `IncludedPaths`:
+        - **Type**: `[]string` (Slice of strings)
+        - **Description**: A list of regular expressions that define URL paths that should be explicitly included for tracking. If a requested path matches any of the regex patterns in this list, the request will be tracked by Matomo, even if it matches an exclusion pattern.
+        - **Example**:
+            ```
+            includedPaths:
+              - "\\.(php|aspx)(\\?.*)?$"
             ```
 
 ### Configuration Breakdown
@@ -82,8 +90,9 @@ matomo-tracking:
           idSite: 21
           excludedPaths:
             - "/admin/*"
-            - "\\.(css|js|ico)$"
             - "\\.\\w{1,5}(\\?.+)?$"
+          includedPaths:
+            - "\\.(php|aspx)(\\?.*)?$"
         "test.de":
           trackingEnabled: false
           idSite: 456
@@ -101,8 +110,10 @@ matomo-tracking:
         - `idSite: 21`: Uses `21` as the Matomo site ID.
         - `excludedPaths`: Specifies paths that should not be tracked. For example:
             - `/admin/*`: Excludes all paths under `/admin`.
-            - `\\.(css|js|ico)$`: Excludes all files with `.css`, `.js`, or `.ico` extensions.
             - `\\.\\w{1,5}(\\?.+)?$`: Excludes files with extensions between 1 and 5 characters, and optionally followed by query parameters.
+        - `includedPaths`: Specifies paths that should be tracked, even if they are excluded. 
+        For example:
+            - `\\.(php|aspx)(\\?.*)?$`: Includes files with extensions `.php` and `.aspx`, and optionally followed by query parameters
     - `"test.de"`:
         - `trackingEnabled: false`: Disables tracking for `test.de`.
         - `idSite: 456`: Uses `456` as the Matomo site ID.
@@ -133,8 +144,14 @@ Sends a tracking request to Matomo asynchronously:
 
 Checks if a given path matches any of the exclusion patterns:
 
-1. Iterates through all exclusion regex patterns.
-2. Returns `true` if the path matches any pattern, `false` otherwise.
+1. Iterates through all exclusion regex patterns provided in the configuration in `excludedPaths`.
+2. For each pattern:
+    - Attempts to match the pattern against the given path.
+    - Logs any errors encountered while processing the regex.
+    - If a match is found, sets a flag indicating the path is excluded and stops further checks.
+3. If no match is found in the exclusion patterns, returns `false` immediately, indicating the path is not excluded
+4. Proceeds to check against inclusion patterns if an exclusion match is found.
+5. If a match is found in `includedPaths`, the function returns `false`, indicating that the path should not be excluded, as it is explicitly included.
 
 
 ## Setup instructions
@@ -190,8 +207,9 @@ Step 3: **Configure Dynamic Configuration**
                   idSite: 21
                   excludedPaths:
                     - "/admin/*"
-                    - "\\.(css|js|ico)$"
                     - "\\.\\w{1,5}(\\?.+)?$"
+                  includedPaths:
+                    - "\\.(php|aspx)(\\?.*)?$"
                 "kansas-suche.de":
                   trackingEnabled: false
                   idSite: 456
