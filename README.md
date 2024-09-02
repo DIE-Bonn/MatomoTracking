@@ -189,6 +189,36 @@ Step 2: **Configure Traefik for Local Plugins**
           moduleName: matomo_tracking
     ```
 
+2. Edit your Traefik `docker-compose.yml` file and create a bind-mount for the `plugins-local` directory in order to make it available for the traefik container.
+
+    Example: `docker-compose.yml`:
+    ```
+    services:
+      edgerouter:
+        image: traefik:2.11
+        container_name: traefik
+        security_opt:
+          - no-new-privileges:true
+        ports:
+          - 80:80
+          - 443:443
+          - 11111:11111
+        restart: "always"
+        volumes:
+          - /etc/localtime:/etc/localtime:ro
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - ./config:/etc/traefik
+          - ./plugins-local:/plugins-local
+          - ./letsencrypt:/letsencrypt
+          - /certs:/certs
+        networks:
+          - edgerouter
+
+    networks:
+      edgerouter:
+        external: true
+    ```
+
 Step 3: **Configure Dynamic Configuration**
 
 1. Create a dynamic configuration file (e.g., dynamic.yml) that defines how the plugin should behave:
