@@ -163,6 +163,7 @@ Step 1: **Create the Plugin**
 2. Place the plugin’s Go source code files in this directory:
 
     - main.go (contains the plugin logic).
+    - .traefik.yml (meta file for loading the plugin)
     - Other necessary Go files (if any).
 
     Here's an example structure
