@@ -6,6 +6,8 @@ This plugin, `matomoTracking`, is designed for Traefik as middleware to handle t
 
 The main purpose of this plugin is to enhance the accuracy of visitor tracking by overcoming limitations associated with the traditional JavaScript-based tracking method used by Matomo. Standard tracking relies on JavaScript code running in the user's browser, which can be blocked by certain browser extensions or privacy tools. By capturing tracking data directly on the server side, this plugin ensures that visitor information is accurately recorded even when JavaScript is disabled or blocked, providing a more reliable and comprehensive analytics solution.
 
+![Matomo Tracking diagram](matomo_tracking_diagram.excalidraw.svg)
+
 ## Structs and Configuration Explanation
 
 1. `Config` Struct
