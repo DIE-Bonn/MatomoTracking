@@ -110,8 +110,21 @@ func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig Dom
         scheme = "https"
     }
 
+    requestURI := req.URL.RequestURI()
+    // Parse the URI
+    parsedURI, err := url.Parse(requestURI)
+    if err != nil {
+        fmt.Println("Error parsing URI:", err)
+        return
+    }
+    // Convert the path to lowercase
+    parsedURI.Path = strings.ToLower(parsedURI.Path)
+
+    // Reconstruct the URI with the lowercase path
+    requestURI = parsedURI.String()
+
     // Construct the full URL
-    fullURL := scheme + "://" + requestedDomain + req.URL.RequestURI()
+    fullURL := scheme + "://" + requestedDomain + requestURI
     query := matomoReqURL.Query()
     query.Set("url", fullURL)
     query.Set("rec", "1")
