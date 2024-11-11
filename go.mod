@@ -1,3 +1,3 @@
-module traefik/plugins-local/src/matomo_tracking
+module github.com/DIE-Bonn/MatomoTracking
 
 go 1.19

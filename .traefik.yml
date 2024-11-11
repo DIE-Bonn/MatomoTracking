@@ -5,10 +5,10 @@ displayName: Matomo Tracking
 type: middleware
 
 # The import path of your plugin.
-import: matomo_tracking
+import: github.com/DIE-Bonn/MatomoTracking
 
 # A brief description of what your plugin is doing.
-summary: This plugin is used to enhance the usual javascript-based tracking with matomo by a backend-based tracking strategy. This concept is able to bypass browser addons which block the execution of javascript code. 
+summary: This plugin is used to enhance the client-side javascript-based tracking with matomo by a server-based tracking strategy. This concept is able to bypass browser addons which block the execution of javascript code. 
 
 # Configuration data for your plugin.
 # This is mandatory,
