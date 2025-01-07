@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://github.com/DIE-Bonn/MatomoTracking/raw/main/.assets/matomo_tracking_logo.png" style="width: 50%" 
+<img src="https://github.com/DIE-Bonn/MatomoTracking/raw/main/.assets/matomo_tracking_logo.png" 
 alt="Matomo_Tracking_Logo" title="Matomo_Tracking_Logo" />
 </p>
 
