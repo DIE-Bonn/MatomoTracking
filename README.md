@@ -26,7 +26,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - Type: `map[string]DomainConfig`
         - Description: A map where each key is a domain name (as a `string`) and the corresponding value is a `DomainConfig` struct. This allows you to define tracking rules for multiple domains individually.
         - Example:
-            ```
+            ```bash
             domains:
               "www3.example.com":
                 trackingEnabled: true
@@ -61,7 +61,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be excluded from tracking. If the requested path matches any of the regex patterns in this list, the request will not be tracked by Matomo.
         - **Example**:
-            ```
+            ```bash
             excludedPaths:
               - "/admin/*"
               - "\\.\\w{1,5}(\\?.+)?$"
@@ -70,7 +70,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be explicitly included for tracking. If a requested path matches any of the regex patterns in this list, the request will be tracked by Matomo, even if it matches an exclusion pattern.
         - **Example**:
-            ```
+            ```bash
             includedPaths:
               - "\\.(php|aspx)(\\?.*)?$"
             ```
@@ -81,7 +81,7 @@ Let's analyze how the configuration is used in the `dynamic.yml` file:
 
 **Example Configuration**
 
-```
+```bash
 matomo-tracking:
   plugin:
     matomoTracking:
@@ -170,7 +170,7 @@ Step 1: **Create the Plugin**
 
     Here's an example structure
 
-    ```
+    ```bash
     traefik/
     ├── plugins-local/
     │   └── src/
@@ -185,7 +185,7 @@ Step 2: **Configure Traefik for Local Plugins**
 1. Edit your Traefik static configuration file (e.g., traefik.yml or traefik.toml), and enable experimental local plugins:
 
     Example: `traefik.yml`:
-    ```
+    ```bash
     experimental:
       localPlugins:
         matomoTracking:
@@ -195,7 +195,7 @@ Step 2: **Configure Traefik for Local Plugins**
 2. Edit your Traefik `docker-compose.yml` file and create a bind-mount for the `plugins-local` directory in order to make it available for the traefik container.
 
     Example: `docker-compose.yml`:
-    ```
+    ```bash
     services:
       edgerouter:
         image: traefik:2.11
@@ -227,7 +227,7 @@ Step 3: **Configure Dynamic Configuration**
 1. Create a dynamic configuration file (e.g., dynamic.yml) that defines how the plugin should behave:
 
     Example `dynamic.yml`:
-    ```
+    ```bash
     http:
       middlewares:
         matomo-tracking:
@@ -256,7 +256,7 @@ Step 4: **Associate the middleware plugin to the entrypoint**
 
     Example `traefik.yml`:
 
-    ```
+    ```bash
     entryPoints:
       webinsecure:
         address: ":80"
