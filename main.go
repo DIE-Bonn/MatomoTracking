@@ -12,18 +12,18 @@ import (
 	"time"
 )
 
-// Config represents the configuration for the MatomoTracking plugin.
-type Config struct {
-	MatomoURL string                  `json:"matomoURL,omitempty"`
-	Domains   map[string]DomainConfig `json:"domains,omitempty"`
-}
-
 // DomainConfig specifies the tracking rules for a specific domain.
 type DomainConfig struct {
 	TrackingEnabled bool     `json:"trackingEnabled,omitempty"`
 	IdSite          int      `json:"idSite,omitempty"`
 	ExcludedPaths   []string `json:"excludedPaths,omitempty"`
 	IncludedPaths	[]string `json:"includedPaths,omitempty"`
+}
+
+// Config represents the configuration for the MatomoTracking plugin.
+type Config struct {
+	MatomoURL string                  `json:"matomoURL,omitempty"`
+	Domains   map[string]DomainConfig `json:"domains,omitempty"`
 }
 
 // CreateConfig returns the default configuration for the plugin.
