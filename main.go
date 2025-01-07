@@ -1,4 +1,4 @@
-package matomo_tracking
+package MatomoTracking
 
 import (
 	"context"
