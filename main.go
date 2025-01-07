@@ -28,7 +28,10 @@ type DomainConfig struct {
 
 // CreateConfig returns the default configuration for the plugin.
 func CreateConfig() *Config {
-	return &Config{}
+	return &Config{
+		MatomoURL: "",
+		Domains: nil,
+	}
 }
 
 // MatomoTracking is the middleware that handles Matomo tracking.
