@@ -8,7 +8,11 @@ type: middleware
 import: github.com/DIE-Bonn/MatomoTracking
 
 # A brief description of what your plugin is doing.
-summary: This plugin is used to enhance the client-side javascript-based tracking with matomo by a server-based tracking strategy. This concept is able to bypass browser addons which block the execution of javascript code. 
+summary: This plugin is used to enhance or replace the client-side javascript-based visitor tracking with Matomo by a server-side tracking strategy. This concept is able to bypass javascript-blocking browser addons to increase the accuracy of visitor tracking and providing more comprehensive tracking results.
+
+iconPath: .assets/matomo_tracking_logo.png
+
+bannerPath: .assets/matomo_tracking_logo.png
 
 # Configuration data for your plugin.
 # This is mandatory,

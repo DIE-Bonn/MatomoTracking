@@ -1,3 +1,18 @@
+<p align="center">
+<img src="https://github.com/DIE-Bonn/MatomoTracking/raw/main/.assets/matomo_tracking_logo.png" style="width: 50%" 
+alt="Matomo_Tracking_Logo" title="Matomo_Tracking_Logo" />
+</p>
+
+---
+
+<h1 align="center">
+<img alt="GitHub" src="https://img.shields.io/github/license/DIE-Bonn/MatomoTracking?color=blue">
+<img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/DIE-Bonn/MatomoTracking?include_prereleases">
+<img alt="GitHub go.mod Go version" src="https://img.shields.io/github/go-mod/go-version/DIE-Bonn/MatomoTracking">
+<img alt="GitHub issues" src="https://img.shields.io/github/issues/DIE-Bonn/MatomoTracking">
+<img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/DIE-Bonn/MatomoTracking/main">
+</h1>
+
 # Matomo Tracking
 
 ## Overview
@@ -6,7 +21,7 @@ This plugin, `MatomoTracking`, is designed for Traefik as middleware to handle t
 
 The main purpose of this plugin is to enhance the accuracy of visitor tracking by overcoming limitations associated with the traditional JavaScript-based tracking method used by Matomo. Standard tracking relies on JavaScript code running in the user's browser, which can be blocked by certain browser extensions or privacy tools. By capturing tracking data directly on the server side, this plugin ensures that visitor information is accurately recorded even when JavaScript is disabled or blocked, providing a more reliable and comprehensive analytics solution.
 
-![Matomo Tracking diagram](.assets/matomo_tracking_network_flow.png)
+![Matomo Tracking diagram](https://github.com/DIE-Bonn/MatomoTracking/raw/main/.assets/matomo_tracking_network_flow.png)
 
 ## Structs and Configuration Explanation
 
@@ -158,73 +173,23 @@ Checks if a given path matches any of the exclusion patterns:
 
 ## Setup instructions
 
-Step 1: **Create the Plugin**
+Step 1: **Load/import the plugin into traefik**
 
-1. Create a directory for your plugin, for example: `traefik/plugins-local/src/matomo_tracking/`.
-
-2. Place the plugin’s Go source code files in this directory:
-
-    - main.go (contains the plugin logic).
-    - .traefik.yml (meta file for loading the plugin)
-    - Other necessary Go files (if any).
-
-    Here's an example structure
-
-    ```bash
-    traefik/
-    ├── plugins-local/
-    │   └── src/
-    │       └── matomo_tracking/ 
-    │           ├── .traefik.yml
-    │           ├── go.mod
-    │           └── main.go
-    ```
-
-Step 2: **Configure Traefik for Local Plugins**
-
-1. Edit your Traefik static configuration file (e.g., traefik.yml or traefik.toml), and enable experimental local plugins:
+1. Edit your Traefik static configuration file (e.g., traefik.yml or traefik.toml), and add the plugin's Github repository:
 
     Example: `traefik.yml`:
     ```bash
     experimental:
-      localPlugins:
+      plugins:
         matomoTracking:
-          moduleName: matomo_tracking
+          moduleName: "github.com/DIE-Bonn/MatomoTracking"
+          version: "v1.0.2"
     ```
+Ensure to use the current version tag.
 
-2. Edit your Traefik `docker-compose.yml` file and create a bind-mount for the `plugins-local` directory in order to make it available for the traefik container.
+Step 2: **Configure Dynamic Configuration**
 
-    Example: `docker-compose.yml`:
-    ```bash
-    services:
-      edgerouter:
-        image: traefik:2.11
-        container_name: traefik
-        security_opt:
-          - no-new-privileges:true
-        ports:
-          - 80:80
-          - 443:443
-          - 11111:11111
-        restart: "always"
-        volumes:
-          - /etc/localtime:/etc/localtime:ro
-          - /var/run/docker.sock:/var/run/docker.sock:ro
-          - ./config:/etc/traefik
-          - ./plugins-local:/plugins-local
-          - ./letsencrypt:/letsencrypt
-          - /certs:/certs
-        networks:
-          - edgerouter
-
-    networks:
-      edgerouter:
-        external: true
-    ```
-
-Step 3: **Configure Dynamic Configuration**
-
-1. Create a dynamic configuration file (e.g., dynamic.yml) that defines how the plugin should behave:
+1. Create a new or use an already existing dynamic configuration file (e.g., dynamic.yml) that defines how the plugin should behave:
 
     Example `dynamic.yml`:
     ```bash
@@ -250,7 +215,7 @@ Step 3: **Configure Dynamic Configuration**
 
     - This configuration defines the global rules for the `matomo-tracking` middleware, consisting of domain names with their individual tracking configuration.
 
-Step 4: **Associate the middleware plugin to the entrypoint**
+Step 3: **Associate the middleware plugin to the entrypoint**
 
 1. Edit your Traefik static configuration file `traefik.yml`:
 
@@ -265,9 +230,9 @@ Step 4: **Associate the middleware plugin to the entrypoint**
             - matomo-tracking@file
     ```
 
-    - This configuration ensures that the `matomo-tracking` plugin can analyze all incoming requests to decide which requests to send to the matomo server for tracking purposes.
+    - This configuration ensures that the `matomo-tracking` plugin can analyze all incoming requests to decide which requests will be sent to the matomo server for tracking purposes.
 
-Step 5: **Restart Traefik**
+Step 4: **Restart Traefik**
 
 1. Start or restart traefik to load the plugin and apply the new configuration
 
