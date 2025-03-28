@@ -12,12 +12,21 @@ import (
 	"time"
 )
 
+// PathConfig specifies the tracking rules for a specific path.
+type PathConfig struct {
+	TrackingEnabled *bool    `json:"trackingEnabled,omitempty"`
+	IdSite          *int     `json:"idSite,omitempty"`
+	ExcludedPaths   []string `json:"excludedPaths,omitempty"`
+	IncludedPaths   []string `json:"includedPaths,omitempty"`
+}
+
 // DomainConfig specifies the tracking rules for a specific domain.
 type DomainConfig struct {
 	TrackingEnabled bool     `json:"trackingEnabled,omitempty"`
 	IdSite          int      `json:"idSite,omitempty"`
 	ExcludedPaths   []string `json:"excludedPaths,omitempty"`
 	IncludedPaths	[]string `json:"includedPaths,omitempty"`
+	PathOverrides   map[string]PathConfig `json:"paths,omitempty"`
 }
 
 // Config represents the configuration for the MatomoTracking plugin.
@@ -55,46 +64,67 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // to the next handler in the chain.
 func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	fmt.Println("Plugin: Matomo Tracking")
-	host := req.Host
-        var requestedDomain string
 
-        // Check if the host contains a colon (indicating a possible port)
-        if strings.Contains(host, ":") {
-        	// Try to split the host and port
+	// Extract the domain name from the request host (without port)
+	host := req.Host
+	var requestedDomain string
+	if strings.Contains(host, ":") {
 		var err error
-        	requestedDomain, _, err = net.SplitHostPort(host)
-        	if err != nil {
-            		// If there's an error, fallback to using the entire host as the domain
-            		requestedDomain = host
-        	}
-        } else {
-        	// No colon found, so host is already just the domain
-        	requestedDomain = host
-    	}
+		requestedDomain, _, err = net.SplitHostPort(host)
+		if err != nil {
+			requestedDomain = host
+		}
+	} else {
+		requestedDomain = host
+	}
 
 	fmt.Println("Requested Domain:", requestedDomain)
-	fmt.Println("Matomo Tracking config: ", m.config)
 
-	// Iterate through the config to check if the requested domain shall be tracked
-        for domainName, domainConfig := range m.config.Domains {
-                // Check if the requested domain exists in the config 
-                if domainName == requestedDomain {
-			// Check if tracking is enabled for this domain
-			fmt.Printf("Requested domain %s found in config with the settings: %t, %d, %s", requestedDomain, domainConfig.TrackingEnabled, domainConfig.IdSite, domainConfig.ExcludedPaths)
-                        if domainConfig.TrackingEnabled {
-                                fmt.Println("Requested Domain exists and is enabled.")
-                                // Check if the requested path matches the exclusion list, if not track the request
-                                if !isPathExcluded(req.URL.Path, domainConfig.ExcludedPaths, domainConfig.IncludedPaths) {
-                                        fmt.Println("Tracking the requested URL.")
+	// Retrieve domain configuration
+	domainConfig, ok := m.config.Domains[requestedDomain]
+	if !ok {
+		fmt.Println("No config found for domain:", requestedDomain)
+		m.next.ServeHTTP(rw, req)
+		return
+	}
 
-                                        // Perform the tracking request asynchronously
-                                        go m.sendTrackingRequest(req, domainConfig, requestedDomain)
-                                }
-                        }
-                        break
-                }
-        }
-	
+	// If domain-wide tracking is disabled, skip
+	if !domainConfig.TrackingEnabled {
+		fmt.Println("Tracking disabled at domain level.")
+		m.next.ServeHTTP(rw, req)
+		return
+	}
+
+	// Start with the base (domain-level) config
+	effectiveConfig := domainConfig
+	requestPath := req.URL.Path
+
+	// Look for the best matching path override (longest prefix match)
+	if domainConfig.PathOverrides != nil {
+		var bestMatch string
+		for prefix := range domainConfig.PathOverrides {
+			if pathMatchesPrefix(requestPath, prefix) && len(prefix) > len(bestMatch) {
+				bestMatch = prefix
+			}
+		}
+
+		// Apply path-level override if found
+		if bestMatch != "" {
+			override := domainConfig.PathOverrides[bestMatch]
+			fmt.Printf("Applying path override for prefix: %s\n", bestMatch)
+			effectiveConfig = mergeConfigs(domainConfig, override)
+		}
+	}
+
+	// Check if tracking is enabled and the path is not excluded
+	if effectiveConfig.TrackingEnabled && !isPathExcluded(requestPath, effectiveConfig.ExcludedPaths, effectiveConfig.IncludedPaths) {
+		fmt.Println("Tracking the request...")
+		go m.sendTrackingRequest(req, effectiveConfig, requestedDomain)
+	} else {
+		fmt.Println("Tracking skipped (disabled or excluded).")
+	}
+
+	// Continue to the next middleware handler
 	m.next.ServeHTTP(rw, req)
 }
 
@@ -225,4 +255,32 @@ func isPathExcluded(path string, excludedPaths, includedPaths []string) bool {
       // If it matched an excluded path but not an included path, exclude it
       fmt.Println("Path is excluded due to no matching included pattern.")
       return true
+}
+
+func mergeConfigs(base DomainConfig, override PathConfig) DomainConfig {
+	merged := base // Start with the domain-level config
+
+	if override.TrackingEnabled != nil {
+		merged.TrackingEnabled = *override.TrackingEnabled
+	}
+
+	if override.IdSite != nil {
+		merged.IdSite = *override.IdSite
+	}
+
+	// For slice overrides, we completely replace the base slices
+	if override.ExcludedPaths != nil {
+		merged.ExcludedPaths = override.ExcludedPaths
+	}
+
+	if override.IncludedPaths != nil {
+		merged.IncludedPaths = override.IncludedPaths
+	}
+
+	return merged
+}
+
+func pathMatchesPrefix(path, prefix string) bool {
+	// Exact match or subpath with trailing slash
+	return path == prefix || strings.HasPrefix(path, prefix+"/")
 }
