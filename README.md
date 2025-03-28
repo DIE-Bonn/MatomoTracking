@@ -41,7 +41,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - Type: `map[string]DomainConfig`
         - Description: A map where each key is a domain name (as a `string`) and the corresponding value is a `DomainConfig` struct. This allows you to define tracking rules for multiple domains individually.
         - Example:
-            ```bash
+            ```
             domains:
               "www3.example.com":
                 trackingEnabled: true
@@ -51,6 +51,16 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
                   - "\\.\\w{1,5}(\\?.+)?$"
                 includedPaths:
                   - "\\.(php|aspx)(\\?.*)?$"
+                pathOverrides:
+                  "/subdir":
+                    trackingEnabled: true
+                    idSite: 24
+                    excludedPaths:
+                      - "/test"
+                      - "/test2"
+                  "/subdir2":
+                    trackingEnabled: false
+                    idSite: 24
               "test.de":
                 trackingEnabled: false
                 idSite: 456
@@ -76,7 +86,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be excluded from tracking. If the requested path matches any of the regex patterns in this list, the request will not be tracked by Matomo.
         - **Example**:
-            ```bash
+            ```
             excludedPaths:
               - "/admin/*"
               - "\\.\\w{1,5}(\\?.+)?$"
@@ -85,10 +95,17 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be explicitly included for tracking. If a requested path matches any of the regex patterns in this list, the request will be tracked by Matomo, even if it matches an exclusion pattern.
         - **Example**:
-            ```bash
+            ```
             includedPaths:
               - "\\.(php|aspx)(\\?.*)?$"
             ```
+    - `PathOverrides`:
+        - **Type**: `map[string]PathConfig`
+        - **Description**: A map of path-specific configuration overrides that apply only to requests matching those paths. Each key is a path prefix (e.g., `/api`, `/special`) and its corresponding value is a `PathConfig` block. This feature allows more granular control over tracking behavior within a domain.
+        Path overrides support the same fields as the domain-level configuration: `trackingEnabled`, `idSite`, `excludedPaths`, and `includedPaths`. If a path override is defined, it will **override** the corresponding settings from the parent domain **only for requests matching that path**.
+        Matching is done using **prefix matching with boundary awareness**. This means:
+          - `/test` matches `/test` and `/test/something`
+          - `/test` does not match `/test2` or `/testing`
 
 ### Configuration Breakdown
 
@@ -96,7 +113,7 @@ Let's analyze how the configuration is used in the `dynamic.yml` file:
 
 **Example Configuration**
 
-```bash
+```
 matomo-tracking:
   plugin:
     matomoTracking:
@@ -110,6 +127,16 @@ matomo-tracking:
             - "\\.\\w{1,5}(\\?.+)?$"
           includedPaths:
             - "\\.(php|aspx)(\\?.*)?$"
+          pathOverrides:
+            "/subdir":
+              trackingEnabled: true
+              idSite: 24
+              excludedPaths:
+                - "/test"
+                - "/test2"
+            "/subdir2":
+              trackingEnabled: false
+              idSite: 24
         "test.de":
           trackingEnabled: false
           idSite: 456
@@ -131,6 +158,19 @@ matomo-tracking:
         - `includedPaths`: Specifies paths that should be tracked, even if they are excluded. 
         For example:
             - `\\.(php|aspx)(\\?.*)?$`: Includes files with extensions `.php` and `.aspx`, and optionally followed by query parameters
+        - `pathOverrides`: The pathOverrides block allows you to define more specific tracking settings for particular path prefixes under the domain. These overrides take precedence over the domain-level settings, but only for requests that match the specified paths.
+        Matching is based on prefix matching with path boundary awareness, meaning:
+          - `/subdir` matches `/subdir` and `/subdir/test`, but not `/subdir2`.
+        
+          For example:
+          - `"/subdir"`:
+            - `trackingEnabled: true`: Enables tracking for paths under `/subdir`, even if other paths are excluded.
+            - `idSite: 24`: Overrides the site ID used for this specific path.
+            - `excludedPaths`: Within `/subdir`, `/subdir/test` and `/subdir/test2` are excluded from tracking.
+          - `"/subdir2"`:
+            - `trackingEnabled: false`: Disables tracking entirely for any request under `/subdir2`.
+            - `idSite: 24`: Still defines an ID, but it is unused since tracking is disabled here.
+
     - `"test.de"`:
         - `trackingEnabled: false`: Disables tracking for `test.de`.
         - `idSite: 456`: Uses `456` as the Matomo site ID.
@@ -144,8 +184,19 @@ Main logic of the middleware:
 
 1. Extracts the requested domain from the host.
 2. Checks if tracking is enabled for the domain.
-3. If enabled and not excluded, sends a tracking request to Matomo asynchronously.
-4. Forwards the request to the next handler in the chain.
+3. If `pathOverrides` are defined, the middleware:
+    - Searches for the most specific matching path override (using longest prefix match with boundary awareness).
+    - Merges the override settings with the domain-level config using `mergeConfigs`.
+4. Uses the resulting (effective) config to evaluate `excludedPaths` and `includedPaths`.
+5. If tracking is still enabled and the path is not excluded, sends a tracking request to Matomo asynchronously.
+6. Forwards the request to the next handler in the chain.
+
+### mergeConfigs Function
+
+Merges a domain-level configuration with a path-level override.
+
+- Any field explicitly set in the path override replaces the value from the base domain config.
+- This function ensures that only the overridden fields change, while other inherited values remain intact.
 
 ### sendTrackingRequest Method
 
@@ -183,9 +234,9 @@ Step 1: **Load/import the plugin into traefik**
       plugins:
         matomoTracking:
           moduleName: "github.com/DIE-Bonn/MatomoTracking"
-          version: "v1.0.2"
+          version: "v1.0.5"
     ```
-Ensure to use the current version tag.
+**Ensure to use the current version tag.**
 
 Step 2: **Configure Dynamic Configuration**
 
@@ -208,6 +259,16 @@ Step 2: **Configure Dynamic Configuration**
                     - "\\.\\w{1,5}(\\?.+)?$"
                   includedPaths:
                     - "\\.(php|aspx)(\\?.*)?$"
+                  pathOverrides:
+                    "/subdir":
+                      trackingEnabled: true
+                      idSite: 24
+                      excludedPaths:
+                        - "/test"
+                        - "/test2"
+                    "/subdir2":
+                      trackingEnabled: false
+                      idSite: 24
                 "kansas-suche.de":
                   trackingEnabled: false
                   idSite: 456
