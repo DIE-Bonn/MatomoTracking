@@ -130,17 +130,21 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // sendTrackingRequest sends a tracking request to Matomo asynchronously.
 func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig DomainConfig, requestedDomain string) {
+    // Get IP address of requesting client/proxy
+    clientIP, _, err := net.SplitHostPort(req.RemoteAddr)
+    if err != nil {
+	fmt.Println("Error reading client IP:", err)
+	return
+    }
+
+    // fmt.Println("Client Request: ", req)
+    fmt.Println("Client Remote Address: ", req.RemoteAddr)
+
     // Build the Matomo URL
     matomoReqURL, err := url.Parse(m.config.MatomoURL)
     if err != nil {
         fmt.Println("Error parsing Matomo URL:", err)
         return
-    }
-
-    // Determine the scheme (http or https)
-    scheme := "http"
-    if req.TLS != nil {
-        scheme = "https"
     }
 
     requestURI := req.URL.RequestURI()
@@ -155,6 +159,12 @@ func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig Dom
 
     // Reconstruct the URI with the lowercase path
     requestURI = parsedURI.String()
+
+    // Determine the scheme (http or https)
+    scheme := "http"
+    if req.TLS != nil {
+        scheme = "https"
+    }
 
     // Construct the full URL
     fullURL := scheme + "://" + requestedDomain + requestURI
@@ -171,22 +181,22 @@ func (m *MatomoTracking) sendTrackingRequest(req *http.Request, domainConfig Dom
         fmt.Println("Error creating Matomo request:", err)
         return
     }
+
+    // Set matomo request headers
     matomoReq.Header.Set("User-Agent", req.Header.Get("User-Agent"))
 
-    // Extract the client's IP address
-    clientIP := req.Header.Get("X-Forwarded-For")
-    if clientIP == "" {
-        // If the X-Forwarded-For header is empty, use the remote address
-        clientIP, _, _ = net.SplitHostPort(req.RemoteAddr)
-    }
-
-    // Set or update the X-Forwarded-For header
-    if existingXFF := matomoReq.Header.Get("X-Forwarded-For"); existingXFF != "" {
-        matomoReq.Header.Set("X-Forwarded-For", existingXFF+", "+clientIP)
+    // Set or append to the X-Forwarded-For header to preserve the client IP chain for Matomo tracking.
+    // The first entry is the original client ip
+    // The last entry is the ip of the last/previous client/proxy in the chain
+    // Matomo should be configured to use the first entry in the X-Forwarded-For header for tracking
+    var existingXFF string
+    if existingXFF := req.Header.Get("X-Forwarded-For"); existingXFF != "" {
+	fmt.Println("Existing XFF: ", existingXFF)
+        matomoReq.Header.Set("X-Forwarded-For", existingXFF+","+clientIP)
     } else {
         matomoReq.Header.Set("X-Forwarded-For", clientIP)
     }
-
+    
     fmt.Println("Matomo tracking request: ", matomoReq)
 
     // Create a custom HTTP client with timeouts
