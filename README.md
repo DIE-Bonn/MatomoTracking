@@ -41,7 +41,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - Type: `map[string]DomainConfig`
         - Description: A map where each key is a domain name (as a `string`) and the corresponding value is a `DomainConfig` struct. This allows you to define tracking rules for multiple domains individually.
         - Example:
-            ```
+            ```yaml
             domains:
               "www3.example.com":
                 trackingEnabled: true
@@ -86,7 +86,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be excluded from tracking. If the requested path matches any of the regex patterns in this list, the request will not be tracked by Matomo.
         - **Example**:
-            ```
+            ```yaml
             excludedPaths:
               - "/admin/*"
               - "\\.\\w{1,5}(\\?.+)?$"
@@ -95,7 +95,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be explicitly included for tracking. If a requested path matches any of the regex patterns in this list, the request will be tracked by Matomo, even if it matches an exclusion pattern.
         - **Example**:
-            ```
+            ```yaml
             includedPaths:
               - "\\.(php|aspx)(\\?.*)?$"
             ```
@@ -113,7 +113,7 @@ Let's analyze how the configuration is used in the `dynamic.yml` file:
 
 **Example Configuration**
 
-```
+```yaml
 matomo-tracking:
   plugin:
     matomoTracking:
@@ -229,7 +229,7 @@ Step 1: **Load/import the plugin into traefik**
 1. Edit your Traefik static configuration file (e.g., traefik.yml or traefik.toml), and add the plugin's Github repository:
 
     Example: `traefik.yml`:
-    ```bash
+    ```yaml
     experimental:
       plugins:
         matomoTracking:
@@ -243,7 +243,7 @@ Step 2: **Configure Dynamic Configuration**
 1. Create a new or use an already existing dynamic configuration file (e.g., dynamic.yml) that defines how the plugin should behave:
 
     Example `dynamic.yml`:
-    ```bash
+    ```yaml
     http:
       middlewares:
         matomo-tracking:
@@ -282,7 +282,7 @@ Step 3: **Associate the middleware plugin to the entrypoint**
 
     Example `traefik.yml`:
 
-    ```bash
+    ```yaml
     entryPoints:
       webinsecure:
         address: ":80"
