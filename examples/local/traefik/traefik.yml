@@ -1,0 +1,32 @@
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      middlewares:
+        - matomo-tracking@file
+    forwardedHeaders:
+      trustedIPs:
+        - "172.16.0.0/12"
+        - "10.0.0.0/8"
+        - "192.168.0.0/16"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+experimental:
+  localPlugins:
+    matomoTracking:
+      moduleName: github.com/DIE-Bonn/MatomoTracking  # represents the folder in plugins-local/src
+
+log:
+  level: DEBUG

@@ -1,0 +1,72 @@
+services:
+  traefik:
+    image: traefik:3
+    ports:
+      - "8080:80"       # Web
+      - "8081:8080"     # Dashboard
+    volumes:
+      - ${HOST_WORKSPACE_FOLDER}/examples/local/traefik:/etc/traefik
+      - ${HOST_WORKSPACE_FOLDER}:/plugins-local/src/github.com/DIE-Bonn/MatomoTracking:rw
+      # ⬇️ Docker socket so Traefik can read container labels
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+  whoami:
+    image: traefik/whoami:v1.11
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.who.loadbalancer.server.port=80"
+      - "traefik.http.routers.who.rule=Host(`demo.localhost`)"
+      - "traefik.http.routers.who.entrypoints=web"
+
+  db:
+    image: mariadb:10.11
+    command: --max-allowed-packet=64M --innodb-log-file-size=256M
+    environment:
+      - MYSQL_DATABASE=matomo
+      - MYSQL_USER=matomo
+      - MYSQL_PASSWORD=matomo
+      - MYSQL_ROOT_PASSWORD=root
+      - TZ=Europe/Berlin
+    volumes:
+      - matomo-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmatomo"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  matomo-local:
+    image: matomo:5-apache
+    container_name: matomo-local
+    ports:
+      - "8082:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - MATOMO_DATABASE_HOST=db
+      - MATOMO_DATABASE_USERNAME=matomo
+      - MATOMO_DATABASE_PASSWORD=matomo
+      - MATOMO_DATABASE_DBNAME=matomo
+      - PHP_MEMORY_LIMIT=256M
+      - TZ=Europe/Berlin
+    volumes:
+      - matomo-config:/var/www/html/config
+      - matomo-plugins:/var/www/html/plugins
+      - matomo-misc:/var/www/html/misc
+      - matomo-tmp:/var/www/html/tmp
+
+  matomo-config-init:
+    image: alpine:3.20
+    depends_on:
+      - matomo-local
+    volumes:
+      - matomo-config:/var/www/html/config
+      - ${HOST_WORKSPACE_FOLDER}/examples/local/matomo-init.sh:/usr/local/bin/matomo-init.sh:ro
+    command: ["/bin/sh", "-eu", "/usr/local/bin/matomo-init.sh"]
+
+volumes:
+  matomo-db:
+  matomo-config:
+  matomo-plugins:
+  matomo-misc:
+  matomo-tmp:

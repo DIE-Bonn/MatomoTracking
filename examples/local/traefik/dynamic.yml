@@ -1,0 +1,14 @@
+http:
+  middlewares:
+    matomo-tracking:
+      plugin:
+        matomoTracking:
+          matomoURL: "http://matomo-local/matomo.php"
+          domains:
+            "demo.localhost":
+              trackingEnabled: true
+              idSite: 1
+              excludedPaths:
+                - "\\.\\w{1,5}(\\?.+)?$"
+              includedPaths:
+                - "index\\.php(\\?.*)?$"

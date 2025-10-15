@@ -1,0 +1,67 @@
+{
+  "name": "Traefik Plugin Dev",
+  // [REQUIRED] Build this image if you have a Dockerfile in .devcontainer/.
+  // If you don't need a custom image, you could replace this with `"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm"`.
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  // [REQUIRED] Gives you `docker`/`docker compose` inside the Dev Container by talking to the host daemon.
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  // [OPTIONAL] The base images already set `vscode` as the default user; keep only if your image changes it.
+  "remoteUser": "vscode",
+  // [REQUIRED] Passes the absolute host path of the project into the Dev Container as HOST_WORKSPACE_FOLDER.
+  // This is referenced in compose.yml for bind mounts so that the host paths resolve correctly
+  // when `docker compose` is run from inside the Dev Container.
+  "remoteEnv": {
+    "HOST_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+  // [OPTIONAL] Editor conveniences: extensions + sensible Go settings.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.makefile-tools",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "spmeesseman.vscode-taskexplorer"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+        "go.testExplorer.showOutput": "always"
+      }
+    }
+  },
+
+  // [OPTIONAL] Normally NOT needed when using the `docker-outside-of-docker` feature,
+  // because that feature already mounts the host's Docker socket and configures DOCKER_HOST.
+  // Keep this only if:
+  //  - You disable socket mounting in the feature settings,
+  //  - You use a non-default socket path,
+  //  - Or you want to explicitly mount a different socket.
+  // Otherwise, remove to avoid duplication.
+  // "mounts": [
+  //   "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  // ],
+
+  // [RECOMMENDED] Install Delve once, and (optionally) tidy any plugin modules under plugins-local/.
+  // Safe if no modules exist yet—tidy is skipped.
+  "postCreateCommand": "/bin/bash -lc 'set -e; go install github.com/go-delve/delve/cmd/dlv@latest; go mod tidy'",
+  // [REQUIRED if testing from inside the Dev Container on Linux]
+  // Gives the Dev Container direct access to host ports (e.g., Traefik on localhost:8080).
+  // Ignored on Docker Desktop (macOS/Windows) — use host.docker.internal instead in those cases.
+  "runArgs": [
+    "--network=host"
+  ],
+  // [OPTIONAL] Explicitly control where the host workspace is mounted inside the Dev Container
+  // and which folder VS Code treats as the workspace root.
+  // By default, VS Code already bind-mounts your local folder into
+  // /workspaces/<folder-name> and sets that as the workspace folder,
+  // so these lines are only needed if you want to change the default target path
+  // or make the behavior explicit for clarity.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
+}
