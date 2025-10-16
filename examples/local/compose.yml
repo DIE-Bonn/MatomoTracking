@@ -17,8 +17,9 @@ services:
       - "traefik.http.routers.who.rule=Host(`demo.localhost`)"
       - "traefik.http.routers.who.entrypoints=web"
 
-  db:
+  matomo-local-db:
     image: mariadb:10.11
+    container_name: matomo-local-db
     command: --max-allowed-packet=64M --innodb-log-file-size=256M
     environment:
       - MYSQL_DATABASE=matomo
@@ -40,10 +41,10 @@ services:
     ports:
       - "8082:80"
     depends_on:
-      db:
+      matomo-local-db:
         condition: service_healthy
     environment:
-      - MATOMO_DATABASE_HOST=db
+      - MATOMO_DATABASE_HOST=matomo-local-db
       - MATOMO_DATABASE_USERNAME=matomo
       - MATOMO_DATABASE_PASSWORD=matomo
       - MATOMO_DATABASE_DBNAME=matomo
@@ -59,10 +60,30 @@ services:
     image: alpine:3.20
     depends_on:
       - matomo-local
+    environment:
+      - INIT_WAIT_TIMEOUT=300
+      - INIT_MIN_LINES=20
+      - INIT_DB_HOST=matomo-local-db
+      - INIT_DB_NAME=matomo
+      - INIT_DB_USER=matomo
+      - INIT_DB_PASS=matomo
     volumes:
       - matomo-config:/var/www/html/config
       - ${HOST_WORKSPACE_FOLDER}/examples/local/matomo-init.sh:/usr/local/bin/matomo-init.sh:ro
     command: ["/bin/sh", "-eu", "/usr/local/bin/matomo-init.sh"]
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: matomo-phpmyadmin
+    depends_on:
+      - matomo-local-db
+    environment:
+      - PMA_HOST=matomo-local-db
+      - PMA_USER=matomo
+      - PMA_PASSWORD=matomo
+      - UPLOAD_LIMIT=64M
+    ports:
+      - "8083:80"
 
 volumes:
   matomo-db:
