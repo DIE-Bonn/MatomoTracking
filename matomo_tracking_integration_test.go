@@ -24,13 +24,11 @@ func waitForMatomo(t *testing.T, base string, timeout time.Duration) (string, bo
 	t.Helper()
 	u, err := url.Parse(base)
 	if err != nil {
-		t.Skipf("Invalid MATOMO_URL %q: %v", base, err)
+		t.Fatalf("Invalid MATOMO_URL %q: %v", base, err)
 		return "", false
 	}
-	// Probe tracking endpoint
 	u.Path = "/matomo.php"
 	q := u.Query()
-	// q.Set("ping", "1")
 	u.RawQuery = q.Encode()
 
 	deadline := time.Now().Add(timeout)
@@ -38,14 +36,13 @@ func waitForMatomo(t *testing.T, base string, timeout time.Duration) (string, bo
 		resp, err := http.Get(u.String())
 		if err == nil {
 			_ = resp.Body.Close()
-			// Accept common statuses from the tracker
 			if resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusFound {
 				return base, true
 			}
 		}
 		time.Sleep(1 * time.Second)
 	}
-	t.Skipf("Local Matomo not reachable at %s within %s", u.String(), timeout)
+	t.Fatalf("Local Matomo not reachable at %s within %s", u.String(), timeout)
 	return "", false
 }
 
@@ -92,7 +89,7 @@ func startMatomoProbeProxy(t *testing.T, target string) (proxyURL string, status
 
 func TestIntegration_LocalMatomo_DirectProbe(t *testing.T) {
 	base := localMatomoURL()
-	if _, ok := waitForMatomo(t, base, 30*time.Second); !ok {
+	if _, ok := waitForMatomo(t, base, 5*time.Second); !ok {
 		return
 	}
 	// If we got here, Matomo is up enough to accept tracker requests.
