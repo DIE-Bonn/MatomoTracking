@@ -3,6 +3,7 @@ package MatomoTracking
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -48,6 +49,47 @@ func waitForMatomo(t *testing.T, base string, timeout time.Duration) (string, bo
 	return "", false
 }
 
+// startMatomoProbeProxy forwards requests to target (e.g., http://127.0.0.1:8082/matomo.php)
+// and sends the upstream Matomo status code on statusCh.
+func startMatomoProbeProxy(t *testing.T, target string) (proxyURL string, statusCh <-chan int, closeFn func()) {
+	t.Helper()
+
+	ch := make(chan int, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Forward to real Matomo
+		forwardURL := target
+		if rq := r.URL.RawQuery; rq != "" {
+			forwardURL += "?" + rq
+		}
+		req, _ := http.NewRequestWithContext(r.Context(), r.Method, forwardURL, nil)
+		req.Header = r.Header.Clone()
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			// Treat as 599 on network error
+			select {
+			case ch <- 599:
+			default:
+			}
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Report status back to test
+		select {
+		case ch <- resp.StatusCode:
+		default:
+		}
+
+		// Mirror upstream status/body (body usually empty for matomo.php)
+		w.WriteHeader(resp.StatusCode)
+		_, _ = io.Copy(io.Discard, resp.Body)
+	}))
+
+	return srv.URL, ch, func() { srv.Close() }
+}
+
 func TestIntegration_LocalMatomo_DirectProbe(t *testing.T) {
 	base := localMatomoURL()
 	if _, ok := waitForMatomo(t, base, 30*time.Second); !ok {
@@ -62,12 +104,21 @@ func TestIntegration_LocalMatomo_MiddlewareSendsRequest(t *testing.T) {
 		return
 	}
 
+	// Route middleware traffic through a lightweight in-memory proxy.
+	// This proxy does *not* send any requests by itself — it just waits for the middleware
+	// to make a tracking call. When that happens, the proxy forwards the request once
+	// to the real Matomo instance and reports Matomo’s HTTP status code back on a channel.
+	// This lets the test verify that a real tracking hit occurred and was accepted
+	// without modifying or double-sending the request.
+	proxyURL, statusCh, closeProxy := startMatomoProbeProxy(t, base+"/matomo.php")
+	defer closeProxy()
+
 	cfg := &Config{
-		MatomoURL: base + "/matomo.php",
+		MatomoURL: proxyURL, // middleware appends query to this URL
 		Domains: map[string]DomainConfig{
 			"demo.localhost": {
 				TrackingEnabled: true,
-				IdSite:          2, // assumes site id 1 exists after setup
+				IdSite:          1, // ensure this site exists or expect failure
 			},
 		},
 	}
@@ -94,6 +145,13 @@ func TestIntegration_LocalMatomo_MiddlewareSendsRequest(t *testing.T) {
 		t.Fatalf("unexpected status: %d body=%q", rr.Code, rr.Body.String())
 	}
 
-	// Give the async tracker a moment (best-effort)
-	time.Sleep(300 * time.Millisecond)
+	// Assert the tracking call happened and Matomo accepted it
+	select {
+	case code := <-statusCh:
+		if code < 200 || code >= 300 {
+			t.Fatalf("Matomo tracking request failed: status %d (check idsite and config)", code)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("did not observe Matomo tracking request")
+	}
 }
