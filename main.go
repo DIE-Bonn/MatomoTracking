@@ -14,19 +14,21 @@ import (
 
 // PathConfig specifies the tracking rules for a specific path.
 type PathConfig struct {
-	TrackingEnabled *bool    `json:"trackingEnabled,omitempty"`
-	IdSite          *int     `json:"idSite,omitempty"`
-	ExcludedPaths   []string `json:"excludedPaths,omitempty"`
-	IncludedPaths   []string `json:"includedPaths,omitempty"`
+	TrackingEnabled    *bool               `json:"trackingEnabled,omitempty"`
+	IdSite             *int                `json:"idSite,omitempty"`
+	ExcludedPaths      []string            `json:"excludedPaths,omitempty"`
+	IncludedPaths      []string            `json:"includedPaths,omitempty"`
+	ResponseConditions *ResponseConditions `json:"responseConditions,omitempty"`
 }
 
 // DomainConfig specifies the tracking rules for a specific domain.
 type DomainConfig struct {
-	TrackingEnabled bool                  `json:"trackingEnabled,omitempty"`
-	IdSite          int                   `json:"idSite,omitempty"`
-	ExcludedPaths   []string              `json:"excludedPaths,omitempty"`
-	IncludedPaths   []string              `json:"includedPaths,omitempty"`
-	PathOverrides   map[string]PathConfig `json:"paths,omitempty"`
+	TrackingEnabled    bool                  `json:"trackingEnabled,omitempty"`
+	IdSite             int                   `json:"idSite,omitempty"`
+	ExcludedPaths      []string              `json:"excludedPaths,omitempty"`
+	IncludedPaths      []string              `json:"includedPaths,omitempty"`
+	PathOverrides      map[string]PathConfig `json:"paths,omitempty"`
+	ResponseConditions *ResponseConditions   `json:"responseConditions,omitempty"`
 }
 
 // Config represents the configuration for the MatomoTracking plugin.
@@ -116,16 +118,21 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// Check if tracking is enabled and the path is not excluded
-	if effectiveConfig.TrackingEnabled && !isPathExcluded(requestPath, effectiveConfig.ExcludedPaths, effectiveConfig.IncludedPaths) {
+	// Invoke next and capture final status/headers
+	rec := newStatusRecorder(rw)
+	m.next.ServeHTTP(rec, req)
+
+	// Decide post-response whether to track
+	shouldTrack := effectiveConfig.TrackingEnabled &&
+		!isPathExcluded(requestPath, effectiveConfig.ExcludedPaths, effectiveConfig.IncludedPaths) &&
+		matchesResponseConditions(rec.status, rec.Header(), effectiveConfig.ResponseConditions)
+
+	if shouldTrack {
 		fmt.Println("Tracking the request...")
 		go m.sendTrackingRequest(req, effectiveConfig, requestedDomain)
 	} else {
-		fmt.Println("Tracking skipped (disabled or excluded).")
+		fmt.Println("Tracking skipped (disabled, excluded, or response conditions not met).")
 	}
-
-	// Continue to the next middleware handler
-	m.next.ServeHTTP(rw, req)
 }
 
 // sendTrackingRequest sends a tracking request to Matomo asynchronously.
@@ -286,6 +293,9 @@ func mergeConfigs(base DomainConfig, override PathConfig) DomainConfig {
 		merged.IncludedPaths = override.IncludedPaths
 	}
 
+	if override.ResponseConditions != nil {
+		merged.ResponseConditions = override.ResponseConditions
+	}
 	return merged
 }
 
