@@ -234,7 +234,7 @@ Step 1: **Load/import the plugin into traefik**
       plugins:
         matomoTracking:
           moduleName: "github.com/DIE-Bonn/MatomoTracking"
-          version: "v1.0.5"
+          version: "v1.1.0"
     ```
 **Ensure to use the current version tag.**
 
@@ -300,4 +300,8 @@ Step 4: **Restart Traefik**
     ```bash
     docker compose down && docker compose up -d
     ```
+
+## Further Documentation
+
+- Response-based tracking conditions: [docs/response-conditions.md](docs/response-conditions.md)
 
