@@ -1,4 +1,4 @@
-package MatomoTracking
+package integration_test
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	matomotracking "github.com/DIE-Bonn/MatomoTracking"
 )
 
 func TestIntegration_ResponseConditions(t *testing.T) {
@@ -19,13 +21,13 @@ func TestIntegration_ResponseConditions(t *testing.T) {
 		proxyURL, statusCh, closeProxy := startMatomoProbeProxy(t, base+"/matomo.php")
 		defer closeProxy()
 
-		cfg := &Config{
+		cfg := &matomotracking.Config{
 			MatomoURL: proxyURL,
-			Domains: map[string]DomainConfig{
+			Domains: map[string]matomotracking.DomainConfig{
 				"demo.localhost": {
 					TrackingEnabled: true,
 					IdSite:          1, // ensure site 1 exists in your local Matomo
-					ResponseConditions: &ResponseConditions{
+					ResponseConditions: &matomotracking.ResponseConditions{
 						TrackOnStatusCodes: []int{200},
 						TrackWhenHeaders: map[string]string{
 							"Content-Type": "text/html; charset=UTF-8",
@@ -41,7 +43,7 @@ func TestIntegration_ResponseConditions(t *testing.T) {
 			_, _ = w.Write([]byte("<html>ok</html>"))
 		})
 
-		h, err := New(context.Background(), next, cfg, "test")
+		h, err := matomotracking.New(context.Background(), next, cfg, "test")
 		if err != nil {
 			t.Fatalf("New() error = %v", err)
 		}
@@ -71,13 +73,13 @@ func TestIntegration_ResponseConditions(t *testing.T) {
 		proxyURL, statusCh, closeProxy := startMatomoProbeProxy(t, base+"/matomo.php")
 		defer closeProxy()
 
-		cfg := &Config{
+		cfg := &matomotracking.Config{
 			MatomoURL: proxyURL,
-			Domains: map[string]DomainConfig{
+			Domains: map[string]matomotracking.DomainConfig{
 				"demo.localhost": {
 					TrackingEnabled: true,
 					IdSite:          1,
-					ResponseConditions: &ResponseConditions{
+					ResponseConditions: &matomotracking.ResponseConditions{
 						TrackOnStatusCodes: []int{200},
 						TrackWhenHeaders: map[string]string{
 							"Content-Type": "text/html; charset=UTF-8",
@@ -93,7 +95,7 @@ func TestIntegration_ResponseConditions(t *testing.T) {
 			_, _ = w.Write([]byte("not found"))
 		})
 
-		h, err := New(context.Background(), next, cfg, "test")
+		h, err := matomotracking.New(context.Background(), next, cfg, "test")
 		if err != nil {
 			t.Fatalf("New() error = %v", err)
 		}

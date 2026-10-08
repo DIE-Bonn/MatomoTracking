@@ -302,6 +302,25 @@ Step 4: **Restart Traefik**
     docker compose down && docker compose up -d
     ```
 
+## Tests
+
+Unit tests live alongside the source files (`main_test.go` and `response_conditions_test.go`). This follows Go's package structure and lets them test private functions without exposing them as public API.
+
+Integration tests live in `tests/integration/` and use the plugin's public API. They require a running Matomo instance with site ID `1`. The default URL is `http://localhost:8082`; set `MATOMO_URL` to use a different instance.
+
+```bash
+# Unit tests only (no Matomo required)
+go test -v .
+
+# Integration tests only (requires Matomo)
+go test -v ./tests/integration
+
+# All tests (requires Matomo)
+go test -v ./...
+```
+
+The same commands are available as VS Code tasks: `go test (unit)`, `go test (integration)`, and `go test`.
+
 ## Further Documentation
 
 - Response-based tracking conditions: [docs/response-conditions.md](docs/response-conditions.md)

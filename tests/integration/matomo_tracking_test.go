@@ -1,4 +1,4 @@
-package MatomoTracking
+package integration_test
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	matomotracking "github.com/DIE-Bonn/MatomoTracking"
 )
 
 func localMatomoURL() string {
@@ -110,9 +112,9 @@ func TestIntegration_LocalMatomo_MiddlewareSendsRequest(t *testing.T) {
 	proxyURL, statusCh, closeProxy := startMatomoProbeProxy(t, base+"/matomo.php")
 	defer closeProxy()
 
-	cfg := &Config{
+	cfg := &matomotracking.Config{
 		MatomoURL: proxyURL, // middleware appends query to this URL
-		Domains: map[string]DomainConfig{
+		Domains: map[string]matomotracking.DomainConfig{
 			"demo.localhost": {
 				TrackingEnabled: true,
 				IdSite:          1, // ensure this site exists or expect failure
@@ -125,7 +127,7 @@ func TestIntegration_LocalMatomo_MiddlewareSendsRequest(t *testing.T) {
 		fmt.Fprint(w, "ok")
 	})
 
-	h, err := New(context.Background(), next, cfg, "test")
+	h, err := matomotracking.New(context.Background(), next, cfg, "test")
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}

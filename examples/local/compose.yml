@@ -1,3 +1,5 @@
+name: matomotracking-local
+
 services:
   traefik:
     image: traefik:3

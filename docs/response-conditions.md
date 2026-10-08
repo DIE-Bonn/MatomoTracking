@@ -47,6 +47,6 @@ Notes and limitations
 - Tracking is sent after response completion; long-running responses delay the send.
 
 Testing
-- Unit tests: response_conditions_unit_test.go
-- Integration tests: response_conditions_integration_test.go (requires local Matomo)
-  - Run: go test -v ./...
+- Unit tests: `response_conditions_test.go`, run with `go test -v .`.
+- Integration tests: `tests/integration/response_conditions_test.go`, run with `go test -v ./tests/integration` (requires local Matomo).
+- All tests: `go test -v ./...` (requires local Matomo).

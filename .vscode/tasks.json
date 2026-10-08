@@ -7,6 +7,8 @@
     { "label": "compose traefik logs", "type": "shell", "command": "docker compose -f examples/local/compose.yml logs -f traefik" },
     { "label": "go test", "type": "shell", "command": "go test -v ./...", "group": "test" },
     { "label": "go test (no cache)", "type": "shell", "command": "go test -v -count=1 ./...", "group": "test" },
+    { "label": "go test (unit)", "type": "shell", "command": "go test -v .", "group": "test" },
+    { "label": "go test (integration)", "type": "shell", "command": "go test -v ./tests/integration", "group": "test" },
     { "label": "test request", "type": "shell", "command": "curl -i -H 'Host: demo.localhost' http://localhost:8080/" },
     { "label": "test request with custom XFF", "type": "shell", "command": "curl -i -H 'Host: demo.localhost' -H 'X-Forwarded-For: 10.0.0.12' http://localhost:8080/" }
   ]
