@@ -83,6 +83,15 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
         - **Type**: `int`
         - **Description**: The unique identifier for the website or domain in Matomo. Each domain has its own site ID that Matomo uses to differentiate between multiple websites being tracked on the same server.
         - **Example**: `21`
+    - `TrackedMethods`:
+        - **Type**: `[]string` (Slice of strings)
+        - **Description**: Optional HTTP method allowlist for tracking. If `trackedMethods` is omitted, all methods are tracked as before. If provided, only listed methods are tracked; matching is case-insensitive. An explicitly empty list (`trackedMethods: []`) tracks no methods. All requests still reach the backend unchanged, regardless of whether they are tracked.
+        - **Example**:
+            ```yaml
+            trackedMethods:
+              - "GET"
+              - "POST"
+            ```
     - `ExcludedPaths`:
         - **Type**: `[]string` (Slice of strings)
         - **Description**: A list of regular expressions that define URL paths that should be excluded from tracking. If the requested path matches any of the regex patterns in this list, the request will not be tracked by Matomo.
@@ -103,7 +112,7 @@ The main purpose of this plugin is to enhance the accuracy of visitor tracking b
     - `PathOverrides`:
         - **Type**: `map[string]PathConfig`
         - **Description**: A map of path-specific configuration overrides that apply only to requests matching those paths. Each key is a path prefix (e.g., `/api`, `/special`) and its corresponding value is a `PathConfig` block. This feature allows more granular control over tracking behavior within a domain.
-        Path overrides support the same fields as the domain-level configuration: `trackingEnabled`, `idSite`, `excludedPaths`, and `includedPaths`. If a path override is defined, it will **override** the corresponding settings from the parent domain **only for requests matching that path**.
+        Path overrides support the same fields as the domain-level configuration: `trackingEnabled`, `idSite`, `trackedMethods`, `excludedPaths`, and `includedPaths`. If a path override is defined, it will **override** the corresponding settings from the parent domain **only for requests matching that path**. A path without its own `trackedMethods` inherits the domain's method list. A path with its own list replaces that list completely, including when it is explicitly empty.
         Matching is done using **prefix matching with boundary awareness**. This means:
           - `/test` matches `/test` and `/test/something`
           - `/test` does not match `/test2` or `/testing`
@@ -123,6 +132,8 @@ matomo-tracking:
         "www3.example.com":
           trackingEnabled: true
           idSite: 21
+          trackedMethods:
+            - "GET"
           excludedPaths:
             - "/admin/*"
             - "\\.\\w{1,5}(\\?.+)?$"
@@ -153,6 +164,7 @@ matomo-tracking:
     - `"www3.example.com"`:
         - `trackingEnabled: true`: Enables tracking for `www3.example.com.`
         - `idSite: 21`: Uses `21` as the Matomo site ID.
+        - `trackedMethods: ["GET"]`: Tracks only GET requests. HEAD, OPTIONS, and other methods are still forwarded but do not generate Matomo pageviews. Omit this setting to track all methods.
         - `excludedPaths`: Specifies paths that should not be tracked. For example:
             - `/admin/*`: Excludes all paths under `/admin`.
             - `\\.\\w{1,5}(\\?.+)?$`: Excludes files with extensions between 1 and 5 characters, and optionally followed by query parameters.
@@ -188,9 +200,9 @@ Main logic of the middleware:
 3. If `pathOverrides` are defined, the middleware:
     - Searches for the most specific matching path override (using longest prefix match with boundary awareness).
     - Merges the override settings with the domain-level config using `mergeConfigs`.
-4. Uses the resulting (effective) config to evaluate `excludedPaths` and `includedPaths`.
-5. If tracking is still enabled and the path is not excluded, sends a tracking request to Matomo asynchronously.
-6. Forwards the request to the next handler in the chain.
+4. Forwards the original request to the next handler in the chain and captures the response status and headers.
+5. Uses the resulting (effective) config to evaluate `trackedMethods`, `excludedPaths`, `includedPaths`, and response conditions.
+6. If tracking is enabled, the method is allowed, the path is not excluded, and response conditions match, sends a tracking request to Matomo asynchronously. This separate tracking request always uses GET, regardless of the original client method.
 
 ### mergeConfigs Function
 

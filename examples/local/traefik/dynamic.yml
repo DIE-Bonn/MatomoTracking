@@ -8,6 +8,8 @@ http:
             "demo.localhost":
               trackingEnabled: true
               idSite: 1
+              trackedMethods:
+                - "GET"
               excludedPaths:
                 - "\\.\\w{1,5}(\\?.+)?$"
               includedPaths:

@@ -16,6 +16,7 @@ import (
 type PathConfig struct {
 	TrackingEnabled    *bool               `json:"trackingEnabled,omitempty"`
 	IdSite             *int                `json:"idSite,omitempty"`
+	TrackedMethods     []string            `json:"trackedMethods,omitempty"`
 	ExcludedPaths      []string            `json:"excludedPaths,omitempty"`
 	IncludedPaths      []string            `json:"includedPaths,omitempty"`
 	ResponseConditions *ResponseConditions `json:"responseConditions,omitempty"`
@@ -25,6 +26,7 @@ type PathConfig struct {
 type DomainConfig struct {
 	TrackingEnabled    bool                  `json:"trackingEnabled,omitempty"`
 	IdSite             int                   `json:"idSite,omitempty"`
+	TrackedMethods     []string              `json:"trackedMethods,omitempty"`
 	ExcludedPaths      []string              `json:"excludedPaths,omitempty"`
 	IncludedPaths      []string              `json:"includedPaths,omitempty"`
 	PathOverrides      map[string]PathConfig `json:"paths,omitempty"`
@@ -124,6 +126,7 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Decide post-response whether to track
 	shouldTrack := effectiveConfig.TrackingEnabled &&
+		isMethodTracked(req.Method, effectiveConfig.TrackedMethods) &&
 		!isPathExcluded(requestPath, effectiveConfig.ExcludedPaths, effectiveConfig.IncludedPaths) &&
 		matchesResponseConditions(rec.status, rec.Header(), effectiveConfig.ResponseConditions)
 
@@ -131,7 +134,7 @@ func (m *MatomoTracking) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		fmt.Println("Tracking the request...")
 		go m.sendTrackingRequest(req, effectiveConfig, requestedDomain)
 	} else {
-		fmt.Println("Tracking skipped (disabled, excluded, or response conditions not met).")
+		fmt.Println("Tracking skipped (disabled, method or response conditions not matched, or path excluded).")
 	}
 }
 
@@ -273,6 +276,21 @@ func isPathExcluded(path string, excludedPaths, includedPaths []string) bool {
 	return true
 }
 
+func isMethodTracked(method string, trackedMethods []string) bool {
+	// An omitted list preserves the original behavior of tracking every method.
+	if trackedMethods == nil {
+		return true
+	}
+
+	for _, trackedMethod := range trackedMethods {
+		if strings.EqualFold(method, trackedMethod) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func mergeConfigs(base DomainConfig, override PathConfig) DomainConfig {
 	merged := base // Start with the domain-level config
 
@@ -282,6 +300,10 @@ func mergeConfigs(base DomainConfig, override PathConfig) DomainConfig {
 
 	if override.IdSite != nil {
 		merged.IdSite = *override.IdSite
+	}
+
+	if override.TrackedMethods != nil {
+		merged.TrackedMethods = override.TrackedMethods
 	}
 
 	// For slice overrides, we completely replace the base slices
