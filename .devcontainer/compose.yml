@@ -1,0 +1,13 @@
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    user: root
+    volumes:
+      - ..:/workspace:cached
+      - ../.kilo/.local:/home/vscode/.local
+    # Preserve the existing localhost access to the separately managed test stack.
+    network_mode: host
+    command: >-
+      /bin/sh -c "chown -R vscode:vscode /home/vscode/.local && sleep infinity"

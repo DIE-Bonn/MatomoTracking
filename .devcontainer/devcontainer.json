@@ -1,10 +1,9 @@
 {
   "name": "Traefik Plugin Dev",
-  // [REQUIRED] Build this image if you have a Dockerfile in .devcontainer/.
-  // If you don't need a custom image, you could replace this with `"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm"`.
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  // Keep the development container separate from the Matomo test environment.
+  "dockerComposeFile": "compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
   // [REQUIRED] Gives you `docker`/`docker compose` inside the Dev Container by talking to the host daemon.
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
@@ -21,6 +20,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "kilocode.Kilo-Code",
         "golang.Go",
         "ms-azuretools.vscode-docker",
         "ms-vscode.makefile-tools",
@@ -31,6 +31,7 @@
       "settings": {
         "go.toolsManagement.autoUpdate": true,
         "go.useLanguageServer": true,
+        "go.diagnostic.vulncheck": "Imports",
         "go.testExplorer.showOutput": "always"
       }
     }
@@ -49,19 +50,7 @@
 
   // [RECOMMENDED] Install Delve once, and (optionally) tidy any plugin modules under plugins-local/.
   // Safe if no modules exist yet—tidy is skipped.
-  "postCreateCommand": "/bin/bash -lc 'set -e; go install github.com/go-delve/delve/cmd/dlv@latest; go mod tidy'",
-  // [REQUIRED if testing from inside the Dev Container on Linux]
-  // Gives the Dev Container direct access to host ports (e.g., Traefik on localhost:8080).
-  // Ignored on Docker Desktop (macOS/Windows) — use host.docker.internal instead in those cases.
-  "runArgs": [
-    "--network=host"
-  ],
-  // [OPTIONAL] Explicitly control where the host workspace is mounted inside the Dev Container
-  // and which folder VS Code treats as the workspace root.
-  // By default, VS Code already bind-mounts your local folder into
-  // /workspaces/<folder-name> and sets that as the workspace folder,
-  // so these lines are only needed if you want to change the default target path
-  // or make the behavior explicit for clarity.
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
+  "postCreateCommand": "/bin/bash -lc 'set -e; git config --global --add safe.directory /workspace; go install github.com/go-delve/delve/cmd/dlv@v1.26.0; go mod tidy'",
+  // Stopping VS Code only stops this Compose stack, not examples/local/compose.yml.
+  "shutdownAction": "stopCompose"
 }
