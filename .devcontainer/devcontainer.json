@@ -50,7 +50,7 @@
 
   // [RECOMMENDED] Install Delve once, and (optionally) tidy any plugin modules under plugins-local/.
   // Safe if no modules exist yet—tidy is skipped.
-  "postCreateCommand": "/bin/bash -lc 'set -e; git config --global --add safe.directory /workspace; go install github.com/go-delve/delve/cmd/dlv@v1.26.0; go mod tidy'",
+  "postCreateCommand": "/bin/bash -lc 'set -e; git config --global --add safe.directory /workspace; go install github.com/go-delve/delve/cmd/dlv@v1.27.2; go mod tidy'",
   // Stopping VS Code only stops this Compose stack, not examples/local/compose.yml.
   "shutdownAction": "stopCompose"
 }
