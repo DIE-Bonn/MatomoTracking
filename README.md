@@ -1,7 +1,8 @@
-<p align="center">
-<img src="https://github.com/DIE-Bonn/MatomoTracking/raw/main/.assets/matomo_tracking_logo.png" 
-alt="Matomo_Tracking_Logo" title="Matomo_Tracking_Logo" />
-</p>
+<div align="center">
+  <img src="https://github.com/DIE-Bonn/MatomoTracking/raw/main/.assets/matomo_tracking_logo.png"
+  alt="Matomo_Tracking_Logo" title="Matomo_Tracking_Logo" />
+</div>
+<p align="center"><em><b>"If blockers block, I still track."</b></em></p>
 
 ---
 
@@ -304,4 +305,3 @@ Step 4: **Restart Traefik**
 ## Further Documentation
 
 - Response-based tracking conditions: [docs/response-conditions.md](docs/response-conditions.md)
-
