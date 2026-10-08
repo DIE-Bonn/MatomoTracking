@@ -6,7 +6,8 @@
   "workspaceFolder": "/workspace",
   // [REQUIRED] Gives you `docker`/`docker compose` inside the Dev Container by talking to the host daemon.
   "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   // [OPTIONAL] The base images already set `vscode` as the default user; keep only if your image changes it.
   "remoteUser": "vscode",
