@@ -1,6 +1,7 @@
 services:
   traefik:
     image: traefik:3
+    pull_policy: always
     ports:
       - "8080:80"       # Web
       - "8081:8080"     # Dashboard
